@@ -1,12 +1,16 @@
 package com.hfad.joke;
 
 import android.app.IntentService;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 
 /**
@@ -19,6 +23,7 @@ public class DelayedMessageService extends IntentService {
 
     public static final String EXTRA_MESSAGE = "message";
     public static final int NOTIFICATION_ID = 5453;
+    public static final String CHANNEL_ID = "channelID";
 
     public DelayedMessageService() {
 
@@ -40,27 +45,46 @@ public class DelayedMessageService extends IntentService {
 
     private void showText(final String text) {
         Log.v("DelayedMessageService", "The message is " + text);
-
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(this, "channelID")
-                .setSmallIcon(android.R.drawable.sym_def_app_icon)
-                .setContentTitle(getString(R.string.question))
-                .setContentText(text)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setVibrate(new long[]{0, 5000})
-                .setAutoCancel(true);
+        NotificationChannel channel;
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
         Intent actionIntent = new Intent(this, MainActivity.class);
         PendingIntent actionPendingIntent = PendingIntent.getActivity(
                 this,
                 0,
                 actionIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-        builder.setContentIntent(actionPendingIntent);
+                0);
 
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String name = getString(R.string.channel_name);
+            String description = getString(R.string.channel_description);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            channel.setVibrationPattern(new long[]{0, 1000});
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setSmallIcon(android.R.drawable.btn_star)
+                        .setContentTitle(getString(R.string.question))
+                        .setContentText(text)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true)
+                        .setVibrate(new long[]{0, 1000})
+                        .setContentIntent(actionPendingIntent);
+
         notificationManager.notify(NOTIFICATION_ID, builder.build());
+
+
     }
+
 
     /**
      * Handle action Foo in the provided background thread with the provided
